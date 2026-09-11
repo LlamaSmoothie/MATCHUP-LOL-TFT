@@ -15,9 +15,15 @@ assert urls, "No bundled assets were found."
 missing = [url for url in urls if not (dist / unquote(url.lstrip("/"))).is_file()]
 assert not missing, f"Missing production assets: {missing}"
 images = [path for path in (root / "assets").rglob("*") if path.is_file()]
-assert images, "Source image catalog is missing."
+assert images, "Local UI art is missing."
 for source in images:
     target = dist / source.relative_to(root / "assets")
     assert target.is_file(), f"Missing public image: {target}"
     assert source.stat().st_size == target.stat().st_size, f"Incomplete public image: {target}"
-print(f"PASS: {len(urls)} bundled URLs resolve and {len(images)} public images were copied.")
+for directory in ("profileicon", "champion-icon", "item", "summonerSpell", "tft-regalia", "archive"):
+    assert not (dist / directory).exists(), f"Retired local assets leaked into the build: {directory}"
+size = sum(path.stat().st_size for path in dist.rglob("*") if path.is_file())
+assert size < 3 * 1024 * 1024, f"Build unexpectedly exceeds 3 MiB: {size} bytes"
+assert any("https://ddragon.leagueoflegends.com/cdn/" in source.read_text(encoding="utf-8")
+           for source in dist.glob("assets/*.js")), "Production bundle has no Riot CDN URLs."
+print(f"PASS: {len(urls)} bundled URLs resolve; {len(images)} local images; build {size / 1024**2:.2f} MiB.")

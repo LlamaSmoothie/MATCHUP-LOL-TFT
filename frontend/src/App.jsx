@@ -161,10 +161,9 @@ function ProfileSummary({ game, profile, matches }) {
   const summary = matchSummary(game, matches);
   const isLol = game === 'lol';
   const rank = profile.rank || 'N/A';
-  const rankTitle = rank === 'N/A' ? 'Provisional' : rank[0] + rank.slice(1).toLowerCase();
   const rankAsset = isLol
     ? `ranked-emblem/emblem-${rank.toLowerCase()}.png`
-    : `tft-regalia/TFT_Regalia_${rankTitle}.png`;
+    : `tft-regalia/${rank === 'N/A' ? 'PROVISIONAL' : rank}`;
 
   return (
     <section className="profile-summary">
@@ -265,7 +264,7 @@ function TftMatchCard({ match, now }) {
       <div className="unit-board">
         {match.units.map((unit, index) => (
           <div className="unit" key={`${match.id}-${index}`}>
-            <GameImage src={asset(`champion-icon/${unit.champion}.png`)} alt="" />
+            <GameImage src={asset(`tft-champion/${unit.champion}`)} alt="" />
             <span>{unit.name}</span>
           </div>
         ))}

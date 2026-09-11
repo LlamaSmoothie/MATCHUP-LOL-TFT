@@ -8,7 +8,7 @@ const dependenciesRoot = fileURLToPath(new URL('../node_modules', import.meta.ur
 
 export default defineConfig({
   root: frontendRoot,
-  // Serve/copy the existing images directly, without importing thousands of modules.
+  // Only branding, fallback art, and LoL rank badges remain local.
   publicDir: assetsRoot,
   cacheDir: fileURLToPath(new URL('../node_modules/.vite', import.meta.url)),
   plugins: [react()],

@@ -12,7 +12,9 @@
     "test:backend": "python -m unittest discover -s tests/backend -p test_*.py -v",
     "check:frontend": "node scripts/check_frontend.mjs",
     "check:build": "python scripts/check_build.py",
-    "check:riot": "python scripts/riot_connection_test.py"
+    "check:riot": "python scripts/riot_connection_test.py",
+    "assets:update": "python scripts/update_assets.py",
+    "check:cdn": "node scripts/check_cdn.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",

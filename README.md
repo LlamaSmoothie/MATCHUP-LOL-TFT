@@ -51,16 +51,58 @@ Relative ages are calculated from match timestamps and update every minute.
 
 ## Loading performance
 
-The initial screen renders without waiting for the backend or Riot. Images are
-served directly from `assets/`; the browser no longer imports the entire image
-catalog as JavaScript before starting React. Match images load lazily as they
-approach the viewport, with a fallback for missing artwork.
+The initial screen renders without waiting for the backend or Riot. Game images
+load directly from Riot's Data Dragon CDN, using a small filename map bundled
+with the app. Match images load lazily as they approach the viewport. Branding,
+the fallback image, and LoL rank badges are served locally from `assets/`.
 
 After resolving a Riot ID, the backend requests profile, rank, and match IDs
 concurrently. Match downloads can begin while profile/rank requests are still
 pending. All upstream calls share `RIOT_MAX_CONCURRENCY`; repeated searches reuse
 the TTL cache. An uncached search still needs live Riot requests, so its duration
 depends on Riot's response times and any retries or rate limits.
+
+## Game images and storage
+
+Profile icons, LoL champions, items, summoner spells, TFT units, and TFT rank
+images use versioned HTTPS URLs on `ddragon.leagueoflegends.com`. These public
+image requests need no Riot API key. Numeric LoL champion IDs are mapped to image
+filenames; TFT uses its separate character-ID mapping. Missing, older-set, or
+unavailable CDN images fall back to the local TFT logo without retry loops.
+
+`frontend/src/riot-assets.json` pins the CDN version and filename mappings. It is
+checked into Git, so normal builds and browser startup make **no metadata
+requests**. The initial pinned version is `16.18.1`. To update intentionally:
+
+```powershell
+npm run assets:update
+# Or pin a specific patch:
+npm run assets:update -- --version 16.18.1
+npm run check:cdn
+npm test
+npm run build
+npm run check:build
+```
+
+The updater caches metadata downloads for 24 hours under ignored
+`data/cache/ddragon/`; `--force` bypasses that cache. It replaces the bundled map
+only after every metadata category loads and validates successfully. Review and
+commit the changed map after checking its images. Riot's metadata can lag a patch,
+and the pinned map only covers the sets Riot includes in that version.
+
+Only 11 images (about 1 MiB) remain in the active `assets/` folder. The 4,111
+retired images were moved into `archive/assets/` and hash-verified, preserving
+the earlier no-deletion requirement. The archive is excluded from the build but
+still occupies disk space. Images are also recoverable from the Git checkpoint
+`recovery/local-assets-2026-09-11`.
+
+The verified production output dropped from about **412 MiB to 1.25 MiB** with
+this migration. The 3 MiB build check guards against copying the large catalog
+back into deployment output accidentally.
+
+CDN delivery reduces deployment storage and image traffic through your server;
+loading game artwork depends on internet access. See [Git recovery instructions](docs/RECOVERY.md)
+to return to the complete local-image application.
 
 ## API
 
@@ -164,9 +206,9 @@ npm run preview
 
 Preview serves the built UI and proxies API requests to the running backend.
 For deployment, serve `frontend/dist/` through your web server and proxy `/api` to the
-Python service. All locally available game images are included in the build.
-Missing/newer assets use a fallback image; the bundled game data is an older
-snapshot and does not contain current TFT-set artwork.
+Python service. Only local branding/fallback art and LoL rank badges are included
+in the build; the other game images are loaded from Riot's CDN. The current
+filename map and local fallback are included even for offline builds.
 
 Optional live tests, using the key in `config.env`:
 
@@ -179,8 +221,9 @@ npm run check:riot -- --game lol --riot-id "GameName#TagLine"
 The legacy `--summoner` flag is accepted as an alias for `--riot-id`.
 GitHub Actions runs offline Python tests, frontend tests, and the Vite build on
 Windows and Linux. `check:frontend` verifies that startup has no image-module
-imports and that Vite serves every image category. `check:build` verifies the
-bundled URLs and that the entire public image catalog was copied into the build.
+imports, local artwork is served, and game images resolve to CDN URLs.
+`check:build` verifies local files, excludes retired image folders, and limits the
+build to 3 MiB. `check:cdn` is an optional live image check with no API key.
 
 ## Project layout
 
@@ -199,17 +242,21 @@ TFTLOL.git/
 ├── frontend/
 │   ├── index.html            Browser entry point
 │   ├── src/                  React components, request state, styles, image helpers
+│   │   └── riot-assets.json  Pinned Riot CDN version and compact filename map
 │   ├── vite.config.js        Frontend root, shared assets, API proxy
 │   └── dist/                 Generated production build (ignored by Git)
-├── assets/                   Shared champion, item, profile, rank, spell, and UI images
+├── assets/                   Local branding/fallback images and LoL rank badges
 ├── data/
 │   ├── static/               Active queues.json and summoner.json reference data
+│   ├── cache/ddragon/        Optional metadata download cache (ignored by Git)
 │   └── tftlol.sqlite3         Existing runtime database (ignored by Git)
 ├── scripts/                  Frontend/build checks and optional live Riot checks
 ├── tests/
 │   ├── backend/              Python offline regression tests
 │   └── frontend/             JavaScript request-state and image tests
 ├── archive/                  Historical code, data, artwork, and previous output
+│   └── assets/               Retired local game images, excluded from builds
+├── docs/RECOVERY.md           Git checkpoint and rollback instructions
 ├── .github/workflows/        Application checks on Windows and Linux
 ├── config.env                Local secrets/settings; kept in place and ignored
 ├── config.env.example        Configuration template

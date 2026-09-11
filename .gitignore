@@ -16,3 +16,4 @@ vite-dev*.log
 api-server*.log
 archive/generated/
 archive/logs/
+data/cache/

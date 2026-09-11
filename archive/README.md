@@ -5,6 +5,7 @@ React/Python web application. Nothing was discarded during reorganization.
 
 | Location | Preserved contents |
 | --- | --- |
+| `assets/` | 4,111 local game images retired by the Riot CDN migration, including unused rank tier/wings artwork; every move was hash-verified |
 | `desktop/` | Original Qt application, generated UI, Qt Designer file, chart utility, game metadata helper, SearchMatch adapter, dependency list, and win-rate image |
 | `desktop/data/` | Old rune and TFT JSON snapshots unused by the current web backend |
 | `desktop/picture/` | Screenshots and older UI artwork unused by React |
@@ -27,6 +28,12 @@ remains covered by the offline tests without requiring PyQt.
 
 The active application starts from the repository root with `npm run backend`
 and `npm run dev`. Neither command loads these archived screens or experiments.
+
+`assets/` here is excluded from Vite's public directory and production builds.
+Keeping this archive preserves the original files on disk; it reduces deployment
+size but does not free the archive's disk space. The complete local-image web app
+and all 4,122 original active images also exist in Git at
+`recovery/local-assets-2026-09-11`. See [recovery instructions](../docs/RECOVERY.md).
 
 ## Move record
 

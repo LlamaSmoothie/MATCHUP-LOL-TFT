@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { createServer } from 'vite';
+import { asset } from '../frontend/src/assets.js';
 
 const measureOnly = process.argv.includes('--measure-only');
 const server = await createServer({
@@ -24,9 +25,7 @@ try {
     assert.equal(imageImports, 0, 'Images must not block startup as JavaScript imports.');
     await server.listen();
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`;
-    for (const path of ['/picture/TFT.png', '/picture/yasuo.png', '/profileicon/6.png',
-      '/champion-icon/6.png', '/item/1001.png', '/summonerSpell/SummonerFlash.png',
-      '/ranked-emblem/emblem-gold.png', '/tft-regalia/TFT_Regalia_Gold.png']) {
+    for (const path of ['/picture/TFT.png', '/picture/yasuo.png', '/ranked-emblem/emblem-gold.png']) {
       const response = await fetch(origin + path);
       assert.equal(response.status, 200, `Missing development image: ${path}`);
       assert.match(response.headers.get('content-type'), /^image\/png/);
@@ -35,7 +34,13 @@ try {
     const page = await fetch(origin + '/');
     assert.equal(page.status, 200);
     assert.match(await page.text(), /\/src\/main.jsx/);
-    console.log('PASS: frontend entry and all image categories are served without image-module imports.');
+    for (const path of ['profileicon/6.png', 'champion-icon/6.png', 'item/1001.png',
+      'summonerSpell/SummonerFlash.png', 'tft-regalia/GOLD']) {
+      assert.equal(new URL(asset(path)).origin, 'https://ddragon.leagueoflegends.com');
+    }
+    const removed = await fetch(origin + '/profileicon/6.png');
+    assert.ok(!removed.headers.get('content-type')?.startsWith('image/'), 'Old images are still served locally.');
+    console.log('PASS: local UI art is served; game images use Riot CDN without startup image imports.');
   }
 } finally {
   await server.close();
