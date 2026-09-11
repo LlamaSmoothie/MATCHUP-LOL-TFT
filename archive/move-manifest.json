@@ -1,0 +1,252 @@
+[
+  {
+    "Source": "api_server.py",
+    "Destination": "backend/api_server.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "app_config.py",
+    "Destination": "backend/app_config.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "app_database.py",
+    "Destination": "backend/app_database.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "match_service.py",
+    "Destination": "backend/match_service.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "riot_client.py",
+    "Destination": "backend/riot_client.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "src",
+    "Destination": "frontend/src",
+    "VerifiedFiles": 5
+  },
+  {
+    "Source": "index.html",
+    "Destination": "frontend/index.html",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "vite.config.js",
+    "Destination": "frontend/vite.config.js",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "champion-icon",
+    "Destination": "assets/champion-icon",
+    "VerifiedFiles": 163
+  },
+  {
+    "Source": "item",
+    "Destination": "assets/item",
+    "VerifiedFiles": 267
+  },
+  {
+    "Source": "profileicon",
+    "Destination": "assets/profileicon",
+    "VerifiedFiles": 3626
+  },
+  {
+    "Source": "ranked-emblem",
+    "Destination": "assets/ranked-emblem",
+    "VerifiedFiles": 33
+  },
+  {
+    "Source": "summonerSpell",
+    "Destination": "assets/summonerSpell",
+    "VerifiedFiles": 16
+  },
+  {
+    "Source": "tft-regalia",
+    "Destination": "assets/tft-regalia",
+    "VerifiedFiles": 15
+  },
+  {
+    "Source": "picture/TFT.png",
+    "Destination": "assets/picture/TFT.png",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "picture/yasuo.png",
+    "Destination": "assets/picture/yasuo.png",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "picture/project2.py",
+    "Destination": "archive/experiments/project2.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "picture",
+    "Destination": "archive/desktop/picture",
+    "VerifiedFiles": 41
+  },
+  {
+    "Source": "project.py",
+    "Destination": "archive/desktop/project.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "basicUI.py",
+    "Destination": "archive/desktop/basicUI.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "chart_test.py",
+    "Destination": "archive/desktop/chart_test.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "gameStat.py",
+    "Destination": "archive/desktop/gameStat.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "searchMatch.py",
+    "Destination": "archive/desktop/searchMatch.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "project.ui",
+    "Destination": "archive/desktop/project.ui",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "requirements.txt",
+    "Destination": "archive/desktop/requirements.txt",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "win_rate.png",
+    "Destination": "archive/desktop/win_rate.png",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "get_data_from_website.py",
+    "Destination": "archive/experiments/get_data_from_website.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/queues.json",
+    "Destination": "data/static/queues.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/summoner.json",
+    "Destination": "data/static/summoner.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/runesReforged.json",
+    "Destination": "archive/desktop/data/runesReforged.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-champion.json",
+    "Destination": "archive/desktop/data/tft-champion.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-hero-augments.json",
+    "Destination": "archive/desktop/data/tft-hero-augments.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-item.json",
+    "Destination": "archive/desktop/data/tft-item.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-queues.json",
+    "Destination": "archive/desktop/data/tft-queues.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-tactician.json",
+    "Destination": "archive/desktop/data/tft-tactician.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "data/tft-trait.json",
+    "Destination": "archive/desktop/data/tft-trait.json",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "test/__pycache__",
+    "Destination": "archive/generated/test-pycache",
+    "VerifiedFiles": 4
+  },
+  {
+    "Source": "test",
+    "Destination": "tests",
+    "VerifiedFiles": 6
+  },
+  {
+    "Source": "tests/test_api_server.py",
+    "Destination": "tests/backend/test_api_server.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "tests/test_match_service.py",
+    "Destination": "tests/backend/test_match_service.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "tests/test_riot_client.py",
+    "Destination": "tests/backend/test_riot_client.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "tests/matchHistory.test.js",
+    "Destination": "tests/frontend/matchHistory.test.js",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "tests/check_build.py",
+    "Destination": "scripts/check_build.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "tests/riot_connection_test.py",
+    "Destination": "scripts/riot_connection_test.py",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "__pycache__",
+    "Destination": "archive/generated/root-pycache",
+    "VerifiedFiles": 16
+  },
+  {
+    "Source": "dist",
+    "Destination": "archive/generated/previous-dist",
+    "VerifiedFiles": 4059
+  },
+  {
+    "Source": "vite-dev.log",
+    "Destination": "archive/logs/vite-dev.log",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "vite-dev.err.log",
+    "Destination": "archive/logs/vite-dev.err.log",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": ".github/workflows/python-package-conda.yml",
+    "Destination": ".github/workflows/app-checks.yml",
+    "VerifiedFiles": 1
+  },
+  {
+    "Source": "frontend/dist",
+    "Destination": "archive/generated/before-load-optimization-dist",
+    "VerifiedFiles": 4059
+  }
+]

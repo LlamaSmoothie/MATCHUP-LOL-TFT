@@ -6,6 +6,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 import chart_test
 import gameStat
 import searchMatch
+from backend.match_service import participant_name
 from basicUI import Ui_MainWindow
 
 
@@ -13,6 +14,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+        self.lineEdit.setPlaceholderText("GameName#TagLine")
+        self.lineEdit_2.setPlaceholderText("GameName#TagLine")
         self.gameStat = gameStat.gameStat()
         self.groupBoxes = []
         self.tft_view_more.clicked.connect(self.tft_view_more_history)
@@ -34,7 +37,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         lol_region_text = self.comboBox_3.currentText()
         if lol_query == "":
             print("False")
-            self.label_200.setText("Summoner name should not be empty")
+            self.label_200.setText("Enter a Riot ID: GameName#TagLine")
             self.label_200.show()
             QtCore.QTimer.singleShot(3000, self.label_200.hide)
         else:
@@ -49,6 +52,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 # delete all existing match groupBox
                 for i in self.groupBoxes:
                     i.deleteLater()
+                self.groupBoxes = []
                 # generate win rate graph
                 self.win_rate_count()
                 # generate static data of Summoner
@@ -60,10 +64,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # view more history function
     def lol_view_more_history(self):
-        self.verticalLayout_9.removeWidget(self.lol_view_more)
         num_match = len(self.groupBoxes)
         # change the match details of the Summoner to new match data
-        self.Summoner.lol_view_more(num_match)
+        if not self.Summoner.lol_view_more(num_match):
+            self.label_200.setText(self.Summoner.errorCase)
+            self.label_200.show()
+            return
         # generate 10 boxes and append to the scroll widget
         self.lol_generate_boxes(10)
         self.stackedWidget.setCurrentIndex(2)
@@ -76,15 +82,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.lol_view_more.hide()
         except AttributeError:
             pass
-        self.groupBoxes = []
+        box_start = len(self.groupBoxes)
         self.viewCheck = True  # check if error caught in the range
         # create groupboxes and layout for each match
         for i in range(len(self.Summoner.match_details)):
             groupBox = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
             groupBox.setMinimumSize(QtCore.QSize(941, 191))
             self.groupBoxes.append(groupBox)
-            self.lol_groupBox(0, i)
-        if len(self.Summoner.match_details) == num and self.viewCheck:
+            self.lol_groupBox(box_start, i)
+        if self.Summoner.hasMore and self.viewCheck:
             self.verticalLayout_9.addWidget(self.lol_view_more)
             self.lol_view_more.show()
 
@@ -321,7 +327,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             lol_right_SummonerLabel.append(lolSummoner_name)
 
         # add groupbox to vertical layout
-        self.verticalLayout_9.addWidget(self.groupBoxes[index])
+        self.verticalLayout_9.addWidget(self.groupBoxes[start + index])
 
         # Summoner match info img display
         # items img display
@@ -372,9 +378,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # participants name display
         for i in range(5):
             lol_left_SummonerLabel[i].setText(
-                self.Summoner.match_details[index]['info']['participants'][i]['summonerName'])
+                participant_name(self.Summoner.match_details[index]['info']['participants'][i]))
             lol_right_SummonerLabel[i].setText(
-                self.Summoner.match_details[index]['info']['participants'][5 + i]['summonerName'])
+                participant_name(self.Summoner.match_details[index]['info']['participants'][5 + i]))
         # participants champion img display
         for i in range(5):
             icon = QtGui.QIcon()
@@ -435,7 +441,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         # find index of summoner in lol game
         if self.Summoner.gameType == 'lol':
             for participant in participants_list:
-                if participant['summonerName'] == self.Summoner.summonerName:
+                if participant.get('puuid') == self.Summoner.me['puuid']:
                     return participants_list.index(participant)
         # find index of summoner in tft games
         elif self.Summoner.gameType == 'tft':
@@ -464,8 +470,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     # calculate the win rate of the summoner then graph the win rate graph using function from chart_test
     def win_rate_count(self):
         win_count = 0
-        for i in self.Summoner.match_details:
-            if i['info']['participants'][self.find_self_participant(i in self.Summoner.match_details)]['win']:
+        for index, match in enumerate(self.Summoner.match_details):
+            if match['info']['participants'][self.find_self_participant(index)]['win']:
                 win_count += 1
         if len(self.Summoner.match_details) == 0:
             return "No available match"
@@ -480,7 +486,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         tft_region_text = self.comboBox_2.currentText()
         if tft_query == "":
             print("False")
-            self.label_201.setText("Summoner name should not be empty")
+            self.label_201.setText("Enter a Riot ID: GameName#TagLine")
             self.label_201.show()
             QtCore.QTimer.singleShot(3000, self.label_201.hide)
         else:
@@ -494,6 +500,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 # delete all existing match groupBox
                 for i in self.groupBoxes:
                     i.deleteLater()
+                self.groupBoxes = []
 
                 # generate 20 boxes and append to the scroll widget
                 self.tft_generate_boxes(20)
@@ -502,10 +509,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     # view more history function
     def tft_view_more_history(self):
-        self.verticalLayout_8.removeWidget(self.tft_view_more)
         num_match = len(self.groupBoxes)
         # change the match details of the Summoner to new match data
-        self.Summoner.tft_view_more(num_match)
+        if not self.Summoner.tft_view_more(num_match):
+            self.label_201.setText(self.Summoner.errorCase)
+            self.label_201.show()
+            return
         # generate 10 boxes and append to the scroll widget
         self.tft_generate_boxes(10)
         self.stackedWidget.setCurrentIndex(3)
@@ -518,7 +527,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.tft_view_more.hide()
         except AttributeError:
             pass
-        self.groupBoxes = []
+        box_start = len(self.groupBoxes)
         self.viewCheck = True  # check if error caught in the range
         # create groupboxes and layout for each match
         for i in range(len(self.Summoner.match_details)):
@@ -527,17 +536,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             groupBox.setMaximumSize(QtCore.QSize(1000, 16777215))
             self.groupBoxes.append(groupBox)
             try:
-                self.tft_groupBox(0, i)
+                self.tft_groupBox(box_start, i)
             except KeyError:
                 self.gameStat.change_version("13.4.1")
                 try:
-                    self.tft_groupBox(0, i)
+                    self.tft_groupBox(box_start, i)
                 except KeyError:
                     groupBox.hide()
                     self.viewCheck = False
                     break
         self.gameStat.change_version("13.6.1")
-        if len(self.Summoner.match_details) == num and self.viewCheck:
+        if self.Summoner.hasMore and self.viewCheck:
             self.verticalLayout_8.addWidget(self.tft_view_more)
             self.tft_view_more.show()
 
@@ -637,7 +646,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.traits.append(trait)
 
         # add groupbox to vertical layout
-        self.verticalLayout_8.addWidget(self.groupBoxes[index])
+        self.verticalLayout_8.addWidget(self.groupBoxes[start + index])
 
         # settings for images
         self_Participant = self.Summoner.match_details[index]['info']['participants'][self.find_self_participant(index)]
