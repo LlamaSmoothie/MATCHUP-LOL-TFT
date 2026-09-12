@@ -1,9 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { asset, assetVersion, fallbackImage } from '../../frontend/src/assets.js';
+import { asset, assetVersion, fallbackImage, championName, itemName, runeName } from '../../frontend/src/assets.js';
 import catalog from '../../frontend/src/riot-assets.json' with { type: 'json' };
 
 const cdn = `https://ddragon.leagueoflegends.com/cdn/${assetVersion}/img`;
+
+test('statistics use bundled display names and unversioned Riot rune icons', () => {
+  assert.equal(championName('62', 'MonkeyKing'), 'Wukong');
+  assert.equal(championName('999999', 'Future Champion'), 'Future Champion');
+  assert.equal(itemName('1001'), 'Boots');
+  assert.equal(itemName('999999'), 'Item 999999');
+  assert.equal(runeName('8005'), 'Press the Attack');
+  assert.equal(runeName('999999'), 'Rune 999999');
+  assert.equal(asset('rune/8005'), 'https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/Precision/PressTheAttack/PressTheAttack.png');
+  assert.equal(asset('rune/999999'), '/picture/TFT.png');
+});
 
 test('numeric profile/item IDs and summoner spells resolve directly to the pinned CDN', () => {
   assert.equal(asset('profileicon/6.png'), `${cdn}/profileicon/6.png`);

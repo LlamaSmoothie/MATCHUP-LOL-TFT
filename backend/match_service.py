@@ -297,6 +297,21 @@ def team_rows(participants):
     ]
 
 
+def lol_runes(player):
+    """Selected primary/secondary runes; stat shards are deliberately excluded."""
+    perks = player.get("perks") or {}
+    styles = perks.get("styles") or []
+    result = {}
+    for description, key in (("primaryStyle", "primary"), ("subStyle", "secondary")):
+        style = next((row for row in styles if row.get("description") == description), {})
+        selections = [row["perk"] for row in style.get("selections", [])
+                      if type(row.get("perk")) is int and row["perk"] > 0]
+        if not style.get("style") or not selections:
+            return None
+        result[key] = {"style": style["style"], "perks": selections}
+    return result
+
+
 def normalize_lol_match(match, puuid):
     info = match["info"]
     participants = info.get("participants", [])
@@ -306,6 +321,12 @@ def normalize_lol_match(match, puuid):
 
     kda, ratio = format_kda(player)
     teams = team_rows(participants)
+    roles = {"TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"}
+    role = next((player.get(field) for field in ("teamPosition", "individualPosition")
+                 if player.get(field) in roles), "UNKNOWN")
+    version = str(info.get("gameVersion", "")).split(".")
+    patch = ".".join(version[:2]) if len(version) >= 2 and all(
+        part.isdigit() for part in version[:2]) else "Unknown"
 
     return {
         "id": match["metadata"]["matchId"],
@@ -314,6 +335,17 @@ def normalize_lol_match(match, puuid):
         "duration": format_duration(info.get("gameDuration")),
         "result": "Victory" if player.get("win") else "Defeat",
         "champion": str(player.get("championId", "")),
+        "championName": player.get("championName", ""),
+        "queueId": info.get("queueId"),
+        "role": role,
+        "patch": patch,
+        # Keep absent combat/inventory data distinct from a real zero.
+        **{field: player.get(field) if type(player.get(field)) is int
+           and player[field] >= 0 else None for field in ("kills", "deaths", "assists")},
+        "finalItems": [str(player[f"item{index}"]) for index in range(6)
+                       if type(player.get(f"item{index}")) is int and player[f"item{index}"] > 0]
+        if all(type(player.get(f"item{index}")) is int for index in range(6)) else None,
+        "runes": lol_runes(player),
         "level": player.get("champLevel", 0),
         "kda": kda,
         "ratio": ratio,

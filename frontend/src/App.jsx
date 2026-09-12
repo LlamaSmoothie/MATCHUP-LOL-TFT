@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, RefreshCw, Trophy, Shield, Swords, Clock3 } from 'lucide-react';
 import { asset } from './assets.js';
 import GameImage from './GameImage.jsx';
+import ChampionStats from './ChampionStats.jsx';
 import { createMatchHistory, formatAge, matchSummary } from './matchHistory.js';
 
 const regions = [
@@ -32,14 +33,11 @@ function App() {
   const { data, error, loading, identity } = React.useSyncExternalStore(
     history.subscribe, history.getSnapshot,
   );
-  const [connection, setConnection] = React.useState(null);
-  const [testingConnection, setTestingConnection] = React.useState(false);
-  const connectionRequest = React.useRef(null);
   const [now, setNow] = React.useState(Date.now);
 
   React.useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
-    return () => { clearInterval(timer); history.cancel(); connectionRequest.current?.abort(); };
+    return () => { clearInterval(timer); history.cancel(); };
   }, [history]);
 
   function submitSearch(event) {
@@ -47,35 +45,9 @@ function App() {
     history.search({ game, region, name: query });
   }
 
-  async function testRiotConnection() {
-    connectionRequest.current?.abort();
-    const request = new AbortController();
-    connectionRequest.current = request;
-    setTestingConnection(true);
-    setConnection(null);
-    try {
-      const params = new URLSearchParams({ game, region });
-      const response = await fetch(`/api/riot-status?${params}`, { signal: request.signal });
-      const payload = await response.json();
-      if (connectionRequest.current !== request) return;
-      if (!response.ok) throw new Error(payload.error || 'Riot API connection failed.');
-      setConnection({ ok: true, message: `Riot API reachable: ${payload.riotService} (${payload.platform})` });
-    } catch (error) {
-      if (connectionRequest.current === request && error.name !== 'AbortError') {
-        setConnection({ ok: false, message: error.message });
-      }
-    } finally {
-      if (connectionRequest.current === request) setTestingConnection(false);
-    }
-  }
-
   function changeGame(nextGame) {
     history.reset();
-    connectionRequest.current?.abort();
-    connectionRequest.current = null;
-    setTestingConnection(false);
     setGame(nextGame);
-    setConnection(null);
   }
 
   return (
@@ -125,19 +97,16 @@ function App() {
             <Search size={18} />
             {loading ? 'Searching' : 'Search'}
           </button>
-          <button className="secondary-button inline-button" type="button" disabled={testingConnection} onClick={testRiotConnection}>
-            {testingConnection ? 'Testing' : 'Test Riot API'}
-          </button>
         </form>
 
-        {connection ? (
-          <div className={connection.ok ? 'status-panel ok' : 'status-panel fail'}>{connection.message}</div>
-        ) : null}
         {error ? <div className="error-panel" role="alert">{error}</div> : null}
 
         {data ? (
           <>
             <ProfileSummary game={game} profile={data.profile} matches={data.matches} />
+            {game === 'lol' && <ChampionStats
+              key={`${identity.name}-${identity.region}-${data.pagination.asOf}`}
+              matches={data.matches} playerName={data.profile.name} identity={identity} historyLoading={loading} />}
             <section className="history-list" aria-label="Match history" aria-busy={loading}>
               {data.matches.length > 0 ? data.matches.map((match) =>
                 game === 'lol' ? <LolMatchCard key={match.id} match={match} now={now} /> : <TftMatchCard key={match.id} match={match} now={now} />,

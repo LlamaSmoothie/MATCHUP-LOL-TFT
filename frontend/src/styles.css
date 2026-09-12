@@ -83,6 +83,7 @@ button:disabled {
 .topbar,
 .search-panel,
 .profile-summary,
+.champion-stats,
 .match-card {
   border: 1px solid #d6e3eb;
   background: white;
@@ -130,7 +131,7 @@ h1 {
 
 .search-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 220px auto auto;
+  grid-template-columns: minmax(220px, 1fr) 220px auto;
   gap: 14px;
   align-items: end;
   margin-top: 18px;
@@ -174,11 +175,6 @@ select {
   width: 100%;
   color: #22607c;
   background: #d9f6fb;
-}
-
-.inline-button {
-  width: auto;
-  white-space: nowrap;
 }
 
 .profile-summary {
@@ -229,31 +225,90 @@ select {
   box-shadow: 0 0 0 1px #d6e3eb;
 }
 
+.champion-stats {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 8px;
+}
+
+.stats-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.stats-heading h2 { margin: 4px 0 0; }
+.stats-heading .eyebrow { overflow-wrap: anywhere; }
+.stats-sample { color: #22607c; font-size: 0.9rem; font-weight: 700; }
+.stats-note { color: #506573; font-size: 0.85rem; line-height: 1.5; }
+.stats-footer { margin: 14px 0 0; }
+
+.stats-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 2fr) repeat(2, minmax(120px, 1fr)) auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stats-button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #c9dae3;
+  border-radius: 6px;
+  color: #22607c;
+  background: #eef8fb;
+  font-weight: 700;
+}
+
+.stats-button[aria-expanded="true"] { background: #d9f6fb; }
+.stats-table-scroll { overflow-x: auto; }
+.stats-expand { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.stats-table { width: 100%; min-width: 850px; border-collapse: collapse; font-size: 0.9rem; }
+.stats-table th, .stats-table td { text-align: left; padding: 12px 10px; border-bottom: 1px solid #d6e3eb; }
+.stats-table thead { color: #506573; background: #f5f9fc; }
+.stats-table td { font-variant-numeric: tabular-nums; }
+.stats-table small { display: block; color: #506573; margin-top: 4px; font-size: 0.78rem; }
+.stats-champion { display: flex; align-items: center; gap: 10px; }
+.stats-champion img { width: 40px; height: 40px; border-radius: 6px; }
+.stats-detail-row { background: #f5f9fc; }
+.stats-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 18px; padding: 8px; }
+.stats-details h3 { font-size: 1rem; margin-bottom: 8px; }
+.stats-item-list, .stats-rune-list { list-style: none; margin: 0; padding: 0; }
+.stats-item-list { display: grid; gap: 10px; }
+.stats-item-list li { display: flex; align-items: center; gap: 10px; }
+.stats-item-list img { width: 36px; height: 36px; border-radius: 4px; }
+.stats-rune-list li + li { border-top: 1px solid #d6e3eb; padding-top: 10px; margin-top: 10px; }
+.stats-runes { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 6px 0; }
+.stats-runes span { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; }
+.stats-runes img { width: 24px; height: 24px; object-fit: contain; background: #26374c; border-radius: 50%; }
+.stats-metadata { grid-column: 1 / -1; margin-bottom: 0; }
+
+.ai-analysis { margin-top: 18px; padding: 18px; border: 1px solid #bcdbe9; border-radius: 8px; background: #f5fbfd; }
+.ai-analysis h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
+.ai-analysis p:last-child { margin-bottom: 0; }
+.ai-error { color: #8f2323; }
+.ai-result { border-top: 1px solid #c9dae3; padding-top: 16px; line-height: 1.6; overflow-wrap: anywhere; }
+.ai-result-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 20px; }
+.ai-result h4 { margin: 0 0 8px; }
+.ai-result ul { padding-left: 20px; margin-top: 0; }
+.ai-result li + li { margin-top: 8px; }
+
 .history-list {
   display: grid;
   gap: 14px;
   margin-top: 18px;
 }
 
-.status-panel,
 .error-panel,
 .empty-row {
   margin-top: 18px;
   border-radius: 8px;
   padding: 14px 16px;
   font-weight: 700;
-}
-
-.status-panel.ok {
-  color: #1d6d3b;
-  background: #ecfff3;
-  border: 1px solid #a8dfbd;
-}
-
-.status-panel.fail {
-  color: #8f2323;
-  background: #fff0f0;
-  border: 1px solid #f0b8b8;
 }
 
 .error-panel {
@@ -465,6 +520,10 @@ select {
 }
 
 @media (max-width: 620px) {
+  .stats-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-filters label:first-child { grid-column: 1 / -1; }
+  .stats-filters .stats-button { grid-column: 1 / -1; }
+
   .content {
     padding: 16px;
   }

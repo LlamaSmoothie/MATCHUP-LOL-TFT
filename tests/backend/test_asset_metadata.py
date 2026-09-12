@@ -10,12 +10,16 @@ from scripts import update_assets as updater
 
 def fixtures():
     return [
-        {"data": {"Aatrox": {"key": "266", "image": {"full": "Aatrox.png"}}}},
+        {"data": {"Aatrox": {"key": "266", "name": "Aatrox", "image": {"full": "Aatrox.png"}}}},
         {"data": {"Maps/Shipping/Map22/Shop/TFT18_Zed": {
             "id": "TFT18_Zed", "image": {"full": "TFT18_Zed.TFT_Set18.png"}}}},
         {"data": {"RANKED_TFT": {
             "Gold": {"image": {"full": "TFT_Regalia_Gold.png"}},
             "Grandmaster": {"image": {"full": "TFT_Regalia_GrandMaster.png"}}}}},
+        {"data": {"1001": {"name": "Boots"}, "2008": {"name": ""}}},
+        [{"id": 8000, "name": "Precision", "icon": "perk-images/Styles/7201_Precision.png",
+          "slots": [{"runes": [{"id": 8005, "name": "Press the Attack",
+                                "icon": "perk-images/Styles/Precision/PressTheAttack/PressTheAttack.png"}]}]}],
     ]
 
 
@@ -30,6 +34,10 @@ class AssetMetadataTests(unittest.TestCase):
         self.assertEqual({"266": "Aatrox.png"}, result["champions"])
         self.assertEqual({"TFT18_Zed": "TFT18_Zed.TFT_Set18.png"}, result["tftChampions"])
         self.assertEqual("TFT_Regalia_GrandMaster.png", result["tftRegalia"]["GRANDMASTER"])
+        self.assertEqual("Aatrox", result["championNames"]["266"])
+        self.assertEqual("Boots", result["itemNames"]["1001"])
+        self.assertEqual("Item 2008", result["itemNames"]["2008"])
+        self.assertEqual("Press the Attack", result["runes"]["8005"]["name"])
         invalid = fixtures()
         invalid[0]["data"]["Aatrox"]["image"]["full"] = "../../secret.png"
         with self.assertRaises(ValueError):
@@ -65,7 +73,7 @@ class AssetMetadataTests(unittest.TestCase):
             with self.assertRaises(OSError):
                 updater.update_assets("16.18.1", output=output)
         self.assertEqual(original, output.read_bytes())
-        payloads = dict(zip(("champion", "tft-champion", "tft-regalia"), fixtures()))
+        payloads = dict(zip(("champion", "tft-champion", "tft-regalia", "item", "runesReforged"), fixtures()))
 
         def download(url, **kwargs):
             return payloads[Path(url).stem]
@@ -73,6 +81,18 @@ class AssetMetadataTests(unittest.TestCase):
         with patch.object(updater, "fetch_json", side_effect=download):
             result = updater.update_assets("16.18.1", output=output)
         self.assertEqual(result, json.loads(output.read_text(encoding="utf-8")))
+
+    def test_invalid_rune_path_or_missing_names_preserve_previous_manifest(self):
+        output = self.root / "manifest.json"
+        original = '{"version":"previous"}'
+        for field in ("name", "icon"):
+            payloads = dict(zip(("champion", "tft-champion", "tft-regalia", "item", "runesReforged"), fixtures()))
+            payloads["runesReforged"][0][field] = "" if field == "name" else "perk-images/../secret.png"
+            output.write_text(original, encoding="utf-8")
+            with patch.object(updater, "fetch_json", side_effect=lambda url, **kwargs: payloads[Path(url).stem]):
+                with self.assertRaises(ValueError):
+                    updater.update_assets("16.18.1", output=output)
+            self.assertEqual(original, output.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

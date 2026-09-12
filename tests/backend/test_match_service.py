@@ -47,6 +47,7 @@ class FakeRiot:
                 return ids[start:start + count]
             match_id = path.split("/")[-1]
             participants = [{"puuid": "P" + tag, "win": tag == "A", "championId": 6,
+                             "kills": 10 if tag == "A" else 2, "deaths": 2, "assists": 5,
                              "placement": 1 if tag == "A" else 8,
                              "units": [], "traits": [], "teamId": 100 if tag == "A" else 200}
                             for tag in ["A", "B"]]
@@ -207,6 +208,8 @@ class ServiceTests(unittest.TestCase):
         second = self.search(name="Player#B")
         self.assertEqual("Victory", first["matches"][0]["result"])
         self.assertEqual("Defeat", second["matches"][0]["result"])
+        self.assertEqual(10, first["matches"][0]["kills"])
+        self.assertEqual(2, second["matches"][0]["kills"])
         self.assertEqual(details, self.riot.count("/matches/M"))
         self.assertEqual(2, len(db.recent_searches()))
         self.assertEqual({"Player#A", "Player#B"},

@@ -6,7 +6,7 @@ import catalog from '../frontend/src/riot-assets.json' with { type: 'json' };
 const tftUnit = Object.keys(catalog.tftChampions).find((id) => /^TFT\d+_/.test(id));
 assert.ok(tftUnit, 'No regular TFT unit is in the pinned metadata.');
 const paths = ['profileicon/6.png', 'champion-icon/6.png', 'item/1001.png',
-  'summonerSpell/SummonerFlash.png', `tft-champion/${tftUnit}`,
+  'summonerSpell/SummonerFlash.png', 'rune/8005', `tft-champion/${tftUnit}`,
   'tft-regalia/GOLD', 'tft-regalia/GRANDMASTER', 'tft-regalia/PROVISIONAL'];
 for (const path of paths) {
   const url = asset(path);

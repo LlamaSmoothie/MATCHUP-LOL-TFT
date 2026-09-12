@@ -7,6 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from . import app_database
+from .analysis_service import analyze
 from .match_service import search, test_riot_connection
 from .riot_client import ApiError, metrics_snapshot
 
@@ -33,6 +34,40 @@ def integer_parameter(query, name, default=None):
 
 
 class ApiHandler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        try:
+            if self.path != "/api/analyze":
+                raise ApiError("Not found", 404)
+            if self.headers.get("Sec-Fetch-Site") == "cross-site":
+                raise ApiError("Analysis must be requested from this application.", 403)
+            if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
+                raise ApiError("Analysis requires application/json.", 415)
+            lengths = self.headers.get_all("Content-Length", [])
+            if self.headers.get("Transfer-Encoding") or len(lengths) != 1 or not lengths[0].isdigit():
+                raise ApiError("Provide a valid Content-Length.")
+            length = int(lengths[0])
+            if not 1 <= length <= 32768:
+                raise ApiError("Analysis request exceeds the 32 KiB limit.", 413)
+            self.connection.settimeout(10)
+            try:
+                raw = self.rfile.read(length)
+                if len(raw) != length:
+                    raise ValueError("Incomplete body")
+                payload = json.loads(raw)
+            except (ValueError, UnicodeError):
+                raise ApiError("Provide a valid JSON analysis request.") from None
+            self.write_json(analyze(payload))
+        except ApiError as error:
+            self.write_json({"error": str(error),
+                             **({"retryAfter": error.retry_after} if error.retry_after else {})},
+                            error.status, error.retry_after)
+        except (BrokenPipeError, ConnectionResetError, TimeoutError):
+            self.close_connection = True
+        except Exception as error:
+            # Do not log request bodies, player data, credentials, or provider errors.
+            LOGGER.error("analysis_error type=%s", type(error).__name__)
+            self.write_json({"error": "The backend could not complete the analysis."}, 500)
+
     def do_GET(self):
         started = time.monotonic()
         parsed = urlparse(self.path)

@@ -2,6 +2,9 @@ import catalog from './riot-assets.json' with { type: 'json' };
 
 // A small checked-in map avoids any metadata request during startup or builds.
 export const assetVersion = catalog.version;
+export const championName = (id, fallback) => catalog.championNames?.[id] || fallback || `Champion ${id}`;
+export const itemName = (id) => catalog.itemNames?.[id] || `Item ${id}`;
+export const runeName = (id) => catalog.runes?.[id]?.name || `Rune ${id}`;
 const cdn = `https://ddragon.leagueoflegends.com/cdn/${assetVersion}/img`;
 const fallbackPath = 'picture/TFT.png';
 const localRanks = new Set(['iron', 'bronze', 'silver', 'gold', 'platinum', 'diamond',
@@ -30,6 +33,8 @@ export function asset(path, base = import.meta.env?.BASE_URL || '/') {
     remote = mappedImage('tft-champion', catalog.tftChampions, id);
   } else if (group === 'tft-regalia') {
     remote = mappedImage('tft-regalia', catalog.tftRegalia, id.toUpperCase());
+  } else if (group === 'rune' && Object.hasOwn(catalog.runes || {}, id)) {
+    remote = `https://ddragon.leagueoflegends.com/cdn/img/${catalog.runes[id].icon}`;
   }
   return remote || local(fallbackPath);
 }

@@ -1,4 +1,4 @@
-"""Refresh the small, checked-in Data Dragon filename map (no Riot API key).
+"""Refresh the compact Data Dragon names and image map (no Riot API key).
 
 Normal builds and browser startup use the saved map and never run this script.
 """
@@ -48,7 +48,14 @@ def image_name(row):
     return filename
 
 
-def make_manifest(version, champions, tft_champions, tft_regalia):
+def display_name(row):
+    name = row["name"]
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("Missing Data Dragon display name.")
+    return name
+
+
+def make_manifest(version, champions, tft_champions, tft_regalia, items, rune_styles):
     if not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Version must be a Data Dragon version such as 16.18.1.")
     lol = {row["key"]: image_name(row) for row in champions["data"].values()}
@@ -56,10 +63,27 @@ def make_manifest(version, champions, tft_champions, tft_regalia):
     tft = {row["id"]: image_name(row) for row in tft_champions["data"].values()}
     ranks = {tier.upper(): image_name(row)
              for tier, row in tft_regalia["data"]["RANKED_TFT"].items()}
+    champion_names = {row["key"]: display_name(row) for row in champions["data"].values()}
+    # Riot includes unnamed placeholder items in otherwise valid catalogs.
+    item_names = {key: display_name(row) if row.get("name") else f"Item {key}"
+                  for key, row in items["data"].items()}
+    runes = {}
+    for style in rune_styles:
+        for row in [style, *(rune for slot in style["slots"] for rune in slot["runes"])]:
+            icon = row["icon"]
+            if not isinstance(icon, str) or not re.fullmatch(
+                    r"perk-images/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.png", icon):
+                raise ValueError("Unexpected Data Dragon rune image path.")
+            runes[str(row["id"])] = {"name": display_name(row), "icon": icon}
     if not lol or not tft or "GOLD" not in ranks or any(not key.isdigit() for key in lol):
         raise ValueError("Incomplete Data Dragon metadata; keeping the previous filename map.")
-    return {"schemaVersion": 1, "version": version,
+    if not item_names or not runes or any(not key.isdigit() for key in (*item_names, *runes)):
+        raise ValueError("Incomplete item or rune metadata.")
+    return {"schemaVersion": 2, "version": version,
             "champions": dict(sorted(lol.items())),
+            "championNames": dict(sorted(champion_names.items())),
+            "itemNames": dict(sorted(item_names.items())),
+            "runes": dict(sorted(runes.items())),
             "tftChampions": dict(sorted(tft.items())),
             "tftRegalia": dict(sorted(ranks.items()))}
 
@@ -73,7 +97,7 @@ def update_assets(version=None, *, force=False, cache_dir=CACHE_DIR, output=OUTP
     if not isinstance(version, str) or not re.fullmatch(r"\d+\.\d+\.\d+", version):
         raise ValueError("Invalid Data Dragon version.")
     urls = [f"{CDN}/cdn/{version}/data/en_US/{name}.json"
-            for name in ("champion", "tft-champion", "tft-regalia")]
+            for name in ("champion", "tft-champion", "tft-regalia", "item", "runesReforged")]
     with ThreadPoolExecutor(max_workers=3) as pool:
         futures = [pool.submit(fetch_json, url, force=force, cache_dir=cache_dir) for url in urls]
         payloads = [future.result() for future in futures]
@@ -93,7 +117,8 @@ def main():
     except Exception as error:
         parser.exit(1, f"Asset update failed; the existing filename map is unchanged: {error}\n")
     print(f"Saved Data Dragon {manifest['version']}: {len(manifest['champions'])} LoL champions, "
-          f"{len(manifest['tftChampions'])} TFT units, {len(manifest['tftRegalia'])} TFT ranks.")
+          f"{len(manifest['tftChampions'])} TFT units, {len(manifest['tftRegalia'])} TFT ranks, "
+          f"{len(manifest['itemNames'])} item names, {len(manifest['runes'])} rune/style names.")
 
 
 if __name__ == "__main__":

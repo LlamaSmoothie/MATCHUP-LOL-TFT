@@ -14,7 +14,8 @@
     "check:build": "python scripts/check_build.py",
     "check:riot": "python scripts/riot_connection_test.py",
     "assets:update": "python scripts/update_assets.py",
-    "check:cdn": "node scripts/check_cdn.mjs"
+    "check:cdn": "node scripts/check_cdn.mjs",
+    "check:ai": "python -m scripts.check_ai"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
