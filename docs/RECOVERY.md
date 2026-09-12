@@ -10,7 +10,9 @@ Git tag:
   active `assets/` paths.
 
 The CDN change is a separate commit tagged `migration/riot-cdn-2026-09-11`.
-Both tags are local. No commits or tags were pushed to a remote.
+Both tags are published with the `PlatformChange` branch on GitHub. In another
+clone, run `git fetch origin --tags` to retrieve them before following the
+recovery commands below.
 
 ## Undo just the CDN migration
 
