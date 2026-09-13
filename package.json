@@ -1,0 +1,29 @@
+{
+  "name": "tftlol-react-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "backend": "python -m backend",
+    "dev": "vite --config frontend/vite.config.js",
+    "build": "vite build --config frontend/vite.config.js",
+    "preview": "vite preview --config frontend/vite.config.js",
+    "test": "node --test tests/frontend/*.test.js",
+    "test:backend": "python -m unittest discover -s tests/backend -p test_*.py -v",
+    "check:frontend": "node scripts/check_frontend.mjs",
+    "check:build": "python scripts/check_build.py",
+    "check:riot": "python scripts/riot_connection_test.py",
+    "assets:update": "python scripts/update_assets.py",
+    "check:cdn": "node scripts/check_cdn.mjs",
+    "check:ai": "python -m scripts.check_ai"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^6.0.7",
+    "typescript": "^5.7.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {}
+}
