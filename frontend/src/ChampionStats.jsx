@@ -1,14 +1,13 @@
 import React from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import GameImage from './GameImage.jsx';
 import { asset, assetVersion, itemName, runeName } from './assets.js';
 import { championFilterOptions, championStatistics } from './championStats.js';
-import AiAnalysis from './AiAnalysis.jsx';
-import { analysisRequest } from './analysis.js';
 
 const emptyFilters = { queue: '', role: '', patch: '' };
 const percent = (value) => `${value.toFixed(1)}%`;
 
-export default function ChampionStats({ matches, playerName, identity, historyLoading }) {
+export default function ChampionStats({ matches, playerName }) {
   const [filters, setFilters] = React.useState(emptyFilters);
   const [expanded, setExpanded] = React.useState(null);
   const [showAll, setShowAll] = React.useState(false);
@@ -16,7 +15,6 @@ export default function ChampionStats({ matches, playerName, identity, historyLo
   const options = React.useMemo(() => championFilterOptions(matches), [matches]);
   const stats = React.useMemo(() => championStatistics(matches, filters), [matches, filters]);
   const visibleRows = showAll ? stats.rows : stats.rows.slice(0, 1);
-  const request = React.useMemo(() => identity && analysisRequest(identity, matches, filters), [identity, matches, filters]);
 
   function changeFilter(key, value) {
     setFilters((previous) => ({ ...previous, [key]: value }));
@@ -35,7 +33,6 @@ export default function ChampionStats({ matches, playerName, identity, historyLo
       </div>
       <p className="stats-note" id={`${panelId}-sample`}>
         Based on this player’s loaded history. Load more history below to expand the sample.
-        Personal pick share is the percentage of filtered matches played on each champion.
       </p>
       <div className="stats-filters">
         {['queue', 'role', 'patch'].map((key) => (
@@ -64,10 +61,13 @@ export default function ChampionStats({ matches, playerName, identity, historyLo
               return <React.Fragment key={row.id}>
                 <tr>
                   <th scope="row"><span className="stats-champion">
-                    <GameImage src={asset(`champion-icon/${row.id}.png`)} alt="" />{row.name}
+                    <GameImage src={asset(`champion-icon/${row.id}.png`)} alt="" />
+                    <span>{row.name}{row.id === stats.rows[0].id && <small>Most played</small>}</span>
                   </span></th>
-                  <td>{row.games}</td><td>{row.wins} / {row.losses}</td>
-                  <td>{percent(row.winRate)}</td><td>{percent(row.pickShare)}</td>
+                  <td>{row.games}</td><td><span className="win-text">{row.wins}</span> / <span className="loss-text">{row.losses}</span></td>
+                  <td><span className={row.winRate >= 50 ? 'win-text' : 'loss-text'}>{percent(row.winRate)}</span>
+                    <span className="rate-meter" aria-hidden="true"><span style={{ width: percent(row.winRate) }} /></span>
+                  </td><td>{percent(row.pickShare)}</td>
                   <td>{row.averages ? <>
                     {row.averages.map((n) => n.toFixed(1)).join(' / ')}
                     <small>{row.deathless ? 'Perfect KDA (no deaths)' : `${row.kdaRatio.toFixed(2)} KDA`}</small>
@@ -75,7 +75,9 @@ export default function ChampionStats({ matches, playerName, identity, historyLo
                   </> : 'Unavailable'}</td>
                   <td><button className="stats-button" aria-expanded={open} aria-controls={detailId}
                     aria-label={`${open ? 'Hide' : 'Show'} items and runes for ${row.name}`}
-                    onClick={() => setExpanded(open ? null : row.id)}>{open ? 'Hide' : 'Items & runes'}</button></td>
+                    onClick={() => setExpanded(open ? null : row.id)}>{open ? 'Hide' : 'Items & runes'}
+                    {open ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+                  </button></td>
                 </tr>
                 <tr id={detailId} hidden={!open} className="stats-detail-row">
                   <td colSpan={7}>{open && <ChampionDetails row={row} />}</td>
@@ -95,11 +97,9 @@ export default function ChampionStats({ matches, playerName, identity, historyLo
             setShowAll(!showAll);
           }}>
           {showAll ? 'Show less' : `Show ${stats.rows.length - 1} more champion${stats.rows.length === 2 ? '' : 's'}`}
+          {showAll ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
         </button>
       </div>}
-      <p className="stats-note stats-footer">Small samples can vary widely. Filters affect this table only; these are not lifetime or global rates.</p>
-      {request && <AiAnalysis key={JSON.stringify(request)} request={request}
-        sampleSize={stats.sampleSize} historyLoading={historyLoading} />}
     </section>
   );
 }

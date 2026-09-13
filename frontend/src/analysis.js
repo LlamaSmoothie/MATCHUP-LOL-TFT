@@ -31,7 +31,9 @@ export function createAnalysis(fetcher = (...args) => fetch(...args)) {
         if (!result.analysis || typeof result.analysis.summary !== 'string'
           || ['observations', 'reviewSuggestions', 'limitations'].some((key) => !Array.isArray(result.analysis[key])
             || result.analysis[key].some((value) => typeof value !== 'string'))
-          || !result.sample || !Number.isInteger(result.sample.sampleSize)
+          || result.matchId !== payload.matchId || !result.match || typeof result.match !== 'object'
+          || ['context', 'combat', 'economy', 'vision', 'objectives', 'sustain'].some((key) =>
+            !result.match[key] || typeof result.match[key] !== 'object' || Array.isArray(result.match[key]))
           || !Number.isFinite(result.generatedAt)) throw new Error('The server returned an invalid analysis.');
         publish({ data: result, loading: false });
       } catch (error) {
@@ -44,7 +46,7 @@ export function createAnalysis(fetcher = (...args) => fetch(...args)) {
   };
 }
 
-export function analysisRequest(identity, matches, filters) {
+export function analysisRequest(identity, match) {
   return { game: identity.game, region: identity.region, name: identity.name,
-    matchIds: [...new Set(matches.map((match) => match.id))].sort(), filters: { ...filters } };
+    matchId: match.id };
 }

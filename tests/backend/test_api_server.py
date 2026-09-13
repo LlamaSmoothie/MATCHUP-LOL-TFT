@@ -22,10 +22,10 @@ class HttpTests(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join()
 
-    def get(self, path):
+    def get(self, path, headers=None):
         connection = http.client.HTTPConnection(*self.server.server_address, timeout=5)
         try:
-            connection.request("GET", path)
+            connection.request("GET", path, headers=headers or {})
             response = connection.getresponse()
             return response.status, dict(response.getheaders()), json.loads(response.read())
         finally:
@@ -97,6 +97,42 @@ class HttpTests(unittest.TestCase):
                 "/api/search?game=tft&region=Korea&name=Player%23TAG&start=10&count=5&asOf=123")[0])
         search.assert_called_once_with(game="tft", region="Korea", name="Player#TAG",
                                        start=10, count=5, as_of=123, refresh=False)
+
+    def test_timeline_route_and_live_origin_controls(self):
+        with patch("backend.api_server.match_timeline", return_value={"available": False}) as timeline:
+            self.assertEqual(200, self.get("/api/match-timeline?game=lol&region=Korea&name=Source%23A&matchId=KR_1")[0])
+            timeline.assert_called_once_with(game="lol", region="Korea", name="Source#A", match_id="KR_1")
+        with patch("backend.api_server.live_game", return_value={"active": False}) as live:
+            for headers, allowed in (({}, True), ({"Origin": "http://localhost:5173"}, True),
+                                     ({"Origin": "https://example.com"}, False),
+                                     ({"Host": "example.com"}, False),
+                                     ({"Sec-Fetch-Site": "cross-site"}, False)):
+                self.assertEqual(200, self.get("/api/live-game?game=lol&region=Korea&name=Source%23A", headers)[0])
+                live.assert_called_with("lol", "Korea", "Source#A", allow_local=allowed)
+
+    def test_live_player_route_preserves_source_game_and_participant(self):
+        with patch("backend.api_server.live_player_profile", return_value={"rank": {"status": "ready"}}) as profile:
+            path = "/api/live-player?game=lol&region=Korea&name=Source%23A&gameId=123&participant=2"
+            self.assertEqual(200, self.get(path)[0])
+            profile.assert_called_once_with("lol", "Korea", "Source#A", "123", 2)
+            self.assertEqual(400, self.get(path + "&participant=3")[0])
+        with patch("backend.api_server.live_player_profile", side_effect=ApiError("Game changed", 409)):
+            self.assertEqual(409, self.get(path)[0])
+
+    def test_match_detail_and_participant_routes_preserve_context_and_status(self):
+        query = "game=lol&region=Korea&name=Source%23A&matchId=KR_1"
+        with patch("backend.api_server.match_details", return_value={"participants": []}) as detail:
+            self.assertEqual(200, self.get("/api/match?" + query)[0])
+            detail.assert_called_once_with(game="lol", region="Korea", name="Source#A", match_id="KR_1")
+        with patch("backend.api_server.match_player", return_value={"name": "Target#B"}) as player:
+            self.assertEqual(200, self.get("/api/match-player?" + query + "&participant=3")[0])
+            player.assert_called_once_with(game="lol", region="Korea", name="Source#A", match_id="KR_1", participant=3)
+            self.assertEqual(400, self.get("/api/match-player?" + query + "&participant=x")[0])
+        with patch("backend.api_server.match_details", side_effect=ApiError("Expired", 409)):
+            self.assertEqual(409, self.get("/api/match?" + query)[0])
+        with patch("backend.api_server.match_player", side_effect=ApiError("Limited", 429, 4)):
+            status, headers, body = self.get("/api/match-player?" + query + "&participant=3")
+            self.assertEqual((429, "4", 4), (status, headers["Retry-After"], body["retryAfter"]))
 
 
 if __name__ == "__main__":

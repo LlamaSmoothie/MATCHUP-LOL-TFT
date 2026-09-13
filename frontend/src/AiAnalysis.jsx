@@ -1,44 +1,49 @@
 import React from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, LoaderCircle, ArrowUpRight } from 'lucide-react';
 import { createAnalysis } from './analysis.js';
 
-export default function AiAnalysis({ request, sampleSize, historyLoading = false }) {
+export default function AiAnalysis({ request, disabled = false }) {
   const [store] = React.useState(() => createAnalysis());
+  const [expanded, setExpanded] = React.useState(false);
   const { data, error, loading } = React.useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   const titleId = React.useId();
   React.useEffect(() => () => store.cancel(), [store]);
-  const tooMany = request.matchIds.length > 200;
   return <section className="ai-analysis" aria-labelledby={titleId} aria-busy={loading}>
     <div className="stats-heading">
-      <h3 id={titleId}><Sparkles size={19} aria-hidden="true" /> AI match insights</h3>
+      <h3 id={titleId}><Sparkles size={19} aria-hidden="true" /> AI match review</h3>
       <button type="button" className="stats-button"
-        disabled={loading || historyLoading || !sampleSize || tooMany || Boolean(data)}
-        onClick={() => store.run(request)}>
-        {loading ? 'Analyzing…' : data ? 'Analysis ready' : error ? 'Retry analysis' : 'Analyze my matches'}
+        disabled={loading || disabled}
+        aria-expanded={data ? expanded : undefined}
+        aria-controls={data ? `${titleId}-result` : undefined}
+        onClick={() => {
+          if (data) setExpanded(!expanded);
+          else { setExpanded(true); store.run(request); }
+        }}>
+        {loading ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : !data && <ArrowUpRight size={15} aria-hidden="true" />}
+        {loading ? 'Analyzing…' : data ? (expanded ? 'Hide insights' : 'Show insights') : error ? 'Retry analysis' : 'Analyze this match'}
       </button>
     </div>
-    <p className="stats-note">Analyze {sampleSize} matches using the current filters, with details for up to 10 most-played champions.
-      On click, aggregate statistics are sent to OpenAI. Player identifiers are excluded.</p>
-    {tooMany && <p className="stats-note">Analysis supports up to 200 loaded matches. Refresh history to start a smaller sample.</p>}
-    {loading && <p role="status">Preparing insights. Your match history remains available.</p>}
+    {!data && <p className="stats-note">Review combat, economy, vision and objectives from this game.
+      On click, match statistics and team totals are sent to OpenAI, along with available timeline checkpoints and events. Player identifiers are excluded.</p>}
+    {disabled && <p className="stats-note">AI review will be ready when the timeline request finishes.</p>}
+    {loading && <p role="status">Reviewing this match. Your history remains available.</p>}
     {error && <p className="ai-error" role="alert">{error}</p>}
-    {data && <AnalysisResult data={data} />}
+    {data && <div id={`${titleId}-result`} hidden={!expanded}><AnalysisResult data={data} /></div>}
   </section>;
 }
 
 export function AnalysisResult({ data }) {
-  const { analysis, sample } = data;
+  const { analysis } = data;
   return <div className="ai-result">
     <p>{analysis.summary}</p>
     <div className="ai-result-columns">
-      {[['observations', 'What the sample shows'], ['reviewSuggestions', 'Questions for your next replay'],
+      {[['observations', 'What the match data shows'], ['reviewSuggestions', 'Questions for this replay'],
         ['limitations', 'Limits of this analysis']].map(([key, title]) => <div key={key}>
         <h4>{title}</h4><ul>{analysis[key].map((text, index) => <li key={index}>{text}</li>)}</ul>
       </div>)}
     </div>
-    <p className="stats-note">AI-generated from {sample.sampleSize} filtered matches;
-      {' '}{sample.coveredChampionCount} of {sample.championCount} champions detailed.
-      {' '}Generated {new Date(data.generatedAt * 1000).toLocaleString()}.
-      {' '}Check claims against the statistics above. Changing the sample or filters clears this analysis.</p>
+    <p className="stats-note">AI-generated for this match on {new Date(data.generatedAt * 1000).toLocaleString()}.
+      {' '}{data.match?.timeline?.available ? 'Includes sampled timeline data and selected events.' : 'Based on end-of-game totals; timeline data is unavailable.'}
+      {' '}Replay video is unavailable. Check claims against the match data.</p>
   </div>;
 }

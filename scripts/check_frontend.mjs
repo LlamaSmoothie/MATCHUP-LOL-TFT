@@ -41,21 +41,105 @@ try {
     }
     const empty = renderToStaticMarkup(React.createElement(ChampionStats, { matches: [], playerName: 'Empty#NA1' }));
     assert.ok(empty.includes('No champion statistics yet.'));
+    assert.ok(!html.includes('Analyze this match'), 'AI analysis must stay outside champion statistics.');
     const { default: AiAnalysis, AnalysisResult } = await server.ssrLoadModule('/src/AiAnalysis.jsx');
     const request = { game: 'lol', region: 'North America', name: 'Example#NA1',
-      matchIds: ['fixture'], filters: { queue: '', role: '', patch: '' } };
-    const ai = renderToStaticMarkup(React.createElement(AiAnalysis, { request, sampleSize: 1 }));
-    assert.ok(ai.includes('Analyze my matches'));
-    assert.ok(ai.includes('aggregate statistics are sent to OpenAI'));
+      matchId: 'fixture' };
+    const ai = renderToStaticMarkup(React.createElement(AiAnalysis, { request }));
+    assert.ok(ai.includes('Analyze this match'));
+    assert.ok(ai.includes('match statistics and team totals are sent to OpenAI'));
+    const { LolMatchCard, TftMatchCard } = await server.ssrLoadModule('/src/App.jsx');
+    const card = renderToStaticMarkup(React.createElement(LolMatchCard, {
+      match: { ...matches[0], spells: [], items: [], teamA: [], teamB: [] },
+      now: 1000, onOpen: () => {},
+    }));
+    assert.ok(card.includes('aria-label="View match details:'), 'Match cards need a keyboard-accessible detail button.');
+    assert.ok(!card.includes('Analyze this match'), 'AI controls belong inside match details.');
+    const tftCard = renderToStaticMarkup(React.createElement(TftMatchCard, {
+      match: { id: 'tft-fixture', placement: '1st', placementNumber: 1, units: [], traits: [] },
+      now: 1000, onOpen: () => {},
+    }));
+    assert.ok(tftCard.includes('aria-label="View match details:'));
+    const { MatchDetailContent } = await server.ssrLoadModule('/src/MatchDetail.jsx');
+    const evidence = { context: { queue: 'ARAM', patch: '16.18', result: 'Victory', role: 'UNKNOWN' },
+      combat: { kills: 0, deaths: 0, assists: 0 }, economy: { csPerMinute: 5.5 }, vision: {}, objectives: {}, sustain: {} };
+    const matchDetails = renderToStaticMarkup(React.createElement(MatchDetailContent, {
+      data: { game: 'lol', playerName: request.name, match: evidence, participants: [
+        { index: 0, name: request.name, isSearchedPlayer: true, canSearch: true, teamId: 100, champion: '6',
+          statistics: evidence, items: ['1001'], result: 'Victory', role: 'TOP' },
+        { index: 1, name: 'Unavailable player', canSearch: false, teamId: 200, champion: '6', items: [] },
+      ] }, request, onProfileSearch: () => {},
+    }));
+    for (const text of ['Scoreboard', 'Match statistics', 'Current player', 'Search Example#NA1',
+      'Analyze this match', 'Boots', '5.5 / min', 'Profile unavailable in this match record', 'disabled=""']) {
+      assert.ok(matchDetails.includes(text), `Missing match detail content: ${text}`);
+    }
+    const tftDetails = renderToStaticMarkup(React.createElement(MatchDetailContent, {
+      data: { game: 'tft', participants: [{ index: 0, name: request.name, canSearch: true,
+        placement: 1, level: 9, goldLeft: 0, units: [{ champion: 'TFT_Example', name: 'Example unit', stars: 2 }] }] },
+      request: { ...request, game: 'tft' }, onProfileSearch: () => {},
+    }));
+    for (const text of ['TFT placement statistics', 'Search Example#NA1', 'View board', 'Example unit']) {
+      assert.ok(tftDetails.includes(text), `Missing TFT detail content: ${text}`);
+    }
+    assert.ok(!tftDetails.includes('Analyze this match'), 'AI currently supports LoL only.');
+    const { TimelineContent } = await server.ssrLoadModule('/src/MatchTimeline.jsx');
+    const timeline = renderToStaticMarkup(React.createElement(TimelineContent, { data: {
+      frameInterval: 60000, playerId: 1, opponentId: 2,
+      participants: [{ id: 1, name: 'Source#A' }, { id: 2, name: 'Other#B' }],
+      samples: [{ timestamp: 0, gold: 500, opponentGold: 500, teamGold: 500, opposingTeamGold: 500 },
+        { timestamp: 60001, gold: 900, opponentGold: 700, teamGold: 900, opposingTeamGold: 700 }],
+      events: [{ timestamp: 50001, type: 'ITEM_PURCHASED', actorId: 1, itemId: 1001, involvement: 'participant' }],
+    } }));
+    for (const text of ['Gold progression', 'Timeline sample', 'Recorded events', 'Purchased Boots', '0:50', 'Other#B']) {
+      assert.ok(timeline.includes(text), `Missing timeline content: ${text}`);
+    }
+    assert.ok(!timeline.includes('NaN'));
+    const { LiveGameContent } = await server.ssrLoadModule('/src/LiveGame.jsx');
+    const live = renderToStaticMarkup(React.createElement(LiveGameContent, { data: {
+      active: true, game: 'lol', queue: 'Ranked Solo', checkedAt: 1000, pollAfter: 5,
+      local: { status: 'connected', gameTime: 62.5, players: [{ name: 'Source#A', championName: 'Urgot',
+        team: 'ORDER', kills: 0, deaths: 1, assists: 0, cs: 4, vision: 0.5, items: ['1001'] }], events: [] },
+    } }));
+    for (const text of ['IN GAME', 'Live player statistics', '1:02', '0 / 1 / 0', 'Boots']) assert.ok(live.includes(text));
+    const { PlayerHistory } = await server.ssrLoadModule('/src/LiveRoster.jsx');
+    const profileData = { rank: { status: 'ready', queues: [
+      { queue: 'Solo/Duo', status: 'ranked', tier: 'GOLD', division: 'II', lp: 32 },
+      { queue: 'Flex', status: 'unranked' }] }, history: { status: 'ready', sampleSize: 10, requestedMatches: 10,
+      mostPlayed: { champion: '6', games: 4 }, averageKills: 6, averageDeaths: 2, averageAssists: 4, kda: 5, deathless: false } };
+    const playerHistory = renderToStaticMarkup(React.createElement(PlayerHistory, { row: { data: profileData } }));
+    for (const text of ['Gold II · 32 LP', 'Solo/Duo', 'Flex', 'Unranked', 'Urgot', '4 / 10 games',
+      '6.0 / 2.0 / 4.0', '5.00 KDA ratio', '10 eligible of 10']) assert.ok(playerHistory.includes(text), `Missing live profile content: ${text}`);
+    const deathless = renderToStaticMarkup(React.createElement(PlayerHistory, { row: { data: {
+      ...profileData, history: { ...profileData.history, deathless: true, kda: null } } } }));
+    assert.ok(deathless.includes('Deathless sample')); assert.ok(!deathless.includes('Infinity'));
+    const publicGame = renderToStaticMarkup(React.createElement(LiveGameContent, { data: {
+      active: true, game: 'lol', gameId: '123', queue: 'ARAM', checkedAt: 1000, pollAfter: 5,
+      participants: [{ index: 0, name: 'Example#NA1', champion: '6', canLoadProfile: true }],
+      local: { status: 'unavailable', message: 'Local feed unavailable.' },
+    } }));
+    for (const text of ['Player profiles', 'Example#NA1', 'Urgot', 'including ARAM', 'Local feed unavailable.']) assert.ok(publicGame.includes(text));
+    console.log('PASS: ongoing roster profiles show ranks, recent champion use, average KDA, and sample labels without a local feed.');
+    const idle = renderToStaticMarkup(React.createElement(LiveGameContent, { data: { active: false, message: 'No ongoing game.' } }));
+    assert.ok(idle.includes('Automatic tracking is stopped'));
+    assert.ok(!idle.includes('Live player statistics'));
+    console.log('PASS: timeline charts, event history, active live details, and stopped tracking render.');
     const analysis = { summary: '<script>untrusted</script>', observations: ['One game.'],
       reviewSuggestions: ['Review a replay.'], limitations: ['Small sample.'] };
     const insight = renderToStaticMarkup(React.createElement(AnalysisResult, {
-      data: { analysis, sample: { sampleSize: 1, championCount: 1, coveredChampionCount: 1 }, generatedAt: 1000 },
+      data: { analysis, matchId: 'fixture', match: { context: { queue: 'ARAM', patch: '16.18', result: 'Victory', role: 'UNKNOWN' },
+        combat: { kills: 0, deaths: 0, assists: 0 }, economy: { csPerMinute: 5.5 }, vision: {}, objectives: {}, sustain: {} }, generatedAt: 1000 },
     }));
     assert.ok(insight.includes('&lt;script&gt;untrusted&lt;/script&gt;'));
     assert.ok(!insight.includes('<script>'));
-    assert.ok(insight.includes('Questions for your next replay'));
-    console.log('PASS: AI analysis renders on demand, labels its sample, and escapes model output.');
+    assert.ok(insight.includes('Questions for this replay'));
+    assert.ok(!insight.includes('View match data used'));
+    assert.ok(!insight.includes('match-statistics'), 'AI results must not duplicate the match statistics panel.');
+    assert.ok(matchDetails.includes('Unavailable'));
+    assert.ok(matchDetails.includes('5.5'));
+    assert.ok(matchDetails.includes('0 / 0 / 0'));
+    console.log('PASS: AI belongs to individual matches, avoids duplicate statistics, and escapes model output.');
+    console.log('PASS: match cards open details, with free scoreboards and participant profile controls for both games.');
     console.log('PASS: champion table, item/rune details, sample labels and empty state render in React.');
     await server.listen();
     const origin = `http://127.0.0.1:${server.httpServer.address().port}`;

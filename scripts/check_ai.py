@@ -2,7 +2,8 @@
 import os
 import sys
 
-from backend.analysis_service import request_analysis, summarize_matches
+from backend.analysis_service import request_analysis
+from backend.match_analysis import match_evidence
 from backend.riot_client import ApiError
 
 
@@ -11,17 +12,18 @@ def main():
     if not key:
         print("Set OPENAI_API_KEY in config.env before running the live AI check.")
         return 1
-    sample = summarize_matches([
-        {"champion": "6", "result": "Victory" if index == 0 else "Defeat",
-         "queueId": 420, "queue": "Ranked Solo", "role": "TOP", "patch": "16.18",
-         "kills": 4, "deaths": 2, "assists": 3, "finalItems": ["1001"], "runes": None}
-        for index in range(2)], {"queue": "420", "role": "TOP", "patch": "16.18"})
+    sample = match_evidence({"info": {
+        "queueId": 450, "mapId": 12, "gameVersion": "16.18.1", "gameDuration": 1200,
+        "participants": [{"puuid": "FICTIONAL", "win": True, "kills": 4, "deaths": 2, "assists": 3,
+                          "goldEarned": 10000, "totalMinionsKilled": 60, "neutralMinionsKilled": 0,
+                          "totalDamageDealtToChampions": 20000, "visionScore": 0,
+                          "damageDealtToBuildings": 2000}]}}, "FICTIONAL")
     try:
         request_analysis(sample, os.getenv("OPENAI_MODEL", "gpt-5.6-luna"), key)
     except ApiError as error:
         print(f"AI check failed: {error}")
         return 1
-    print("PASS: OpenAI returned valid structured insights for a fictional two-match sample.")
+    print("PASS: OpenAI returned valid structured insights for one fictional match.")
     return 0
 
 

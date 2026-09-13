@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { analysisRequest, createAnalysis } from '../../frontend/src/analysis.js';
 
 const payload = { game: 'lol', region: 'North America', name: 'Player#A',
-  matchIds: ['NA1_1'], filters: { queue: '', role: '', patch: '' } };
+  matchId: 'NA1_1' };
 const result = { analysis: { summary: 'One game.', observations: ['One win.'],
   reviewSuggestions: ['What happened before your death?'], limitations: ['Small sample.'] },
-  sample: { sampleSize: 1, championCount: 1, coveredChampionCount: 1 }, generatedAt: 1000 };
+  matchId: 'NA1_1', match: { context: {}, combat: {}, economy: {}, vision: {}, objectives: {}, sustain: {} }, generatedAt: 1000 };
 const response = (body = result, ok = true) => ({ ok, json: async () => body });
 const deferred = () => { let resolve; const promise = new Promise((r) => { resolve = r; }); return { promise, resolve }; };
 
-test('analysis only runs on demand, posts identifiers/filters, and ignores double clicks', async () => {
+test('analysis only runs on demand, posts one match ID, and ignores double clicks', async () => {
   const wait = deferred();
   const calls = [];
   const store = createAnalysis((...args) => { calls.push(args); return wait.promise; });
@@ -42,7 +42,7 @@ test('errors stay separate from match history and can be retried', async () => {
   assert.deepEqual(store.getSnapshot().data, result);
 });
 
-test('changing sample or unmounting aborts and ignores a late AI response', async () => {
+test('changing player or unmounting aborts and ignores a late AI response', async () => {
   for (const action of ['reset', 'cancel']) {
     const wait = deferred();
     let signal;
@@ -57,22 +57,32 @@ test('changing sample or unmounting aborts and ignores a late AI response', asyn
   }
 });
 
-test('each player, page and filter selection gets a distinct request context', () => {
+test('requests identify one player and match without champion filters or browser statistics', () => {
   const identity = { game: 'lol', region: 'North America', name: 'Player#A' };
-  const filters = { queue: '', role: '', patch: '' };
-  const first = analysisRequest(identity, [{ id: 'b', kills: 999, teamA: ['private'] }, { id: 'a' }, { id: 'a' }], filters);
-  assert.deepEqual(first.matchIds, ['a', 'b']);
-  assert.equal(Object.hasOwn(first, 'kills'), false);
-  assert.equal(Object.hasOwn(first, 'teamA'), false);
-  assert.notDeepEqual(first, analysisRequest({ ...identity, name: 'Other#B' }, [{ id: 'a' }], filters));
-  assert.notDeepEqual(first, analysisRequest(identity, [{ id: 'a' }, { id: 'b' }, { id: 'c' }], filters));
-  assert.notDeepEqual(first, analysisRequest(identity, [{ id: 'a' }, { id: 'b' }], { ...filters, queue: '420' }));
-  filters.queue = '450';
-  assert.equal(first.filters.queue, '');
+  const match = { id: 'NA1_1', kills: 999, teamA: ['private'], champion: '6', filters: { queue: '450' } };
+  const first = analysisRequest(identity, match);
+  assert.deepEqual(first, payload);
+  assert.notDeepEqual(first, analysisRequest({ ...identity, name: 'Other#B' }, match));
+  assert.notDeepEqual(first, analysisRequest(identity, { id: 'NA1_2' }));
+  assert.deepEqual(first, analysisRequest(identity, { ...match, filters: { role: 'TOP' } }));
+  match.id = 'NA1_3';
+  assert.equal(first.matchId, 'NA1_1');
+});
+
+test('different match cards retain independent analyses and errors', async () => {
+  const first = createAnalysis(async () => response());
+  const second = createAnalysis(async () => response({ error: 'Limited' }, false));
+  await first.run(payload);
+  await second.run({ ...payload, matchId: 'NA1_2' });
+  assert.deepEqual(first.getSnapshot().data, result);
+  assert.equal(second.getSnapshot().data, null);
+  assert.match(second.getSnapshot().error, /Limited/);
 });
 
 test('malformed provider payloads cannot crash the analysis panel', async () => {
-  for (const body of [{}, { ...result, analysis: { ...result.analysis, observations: [{}] } }]) {
+  for (const body of [{}, { ...result, analysis: { ...result.analysis, observations: [{}] } },
+    { ...result, matchId: 'NA1_OTHER' }, { ...result, match: {} },
+    { ...result, match: { ...result.match, combat: [] } }]) {
     const store = createAnalysis(async () => response(body));
     await store.run(payload);
     assert.equal(store.getSnapshot().data, null);

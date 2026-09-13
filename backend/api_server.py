@@ -1,5 +1,6 @@
 """Local JSON API. Match lookup and caching live in match_service."""
 import json
+import ipaddress
 import logging
 import os
 import time
@@ -9,6 +10,10 @@ from urllib.parse import parse_qs, urlparse
 from . import app_database
 from .analysis_service import analyze
 from .match_service import search, test_riot_connection
+from .match_details import match_details, match_player
+from .timeline_service import match_timeline
+from .live_service import live_game
+from .live_profiles import live_player_profile
 from .riot_client import ApiError, metrics_snapshot
 
 DEFAULT_HOST = "127.0.0.1"
@@ -89,6 +94,25 @@ class ApiHandler(BaseHTTPRequestHandler):
                     parameter(query, "game", "lol"),
                     parameter(query, "region", "North America"),
                 )
+            elif parsed.path == "/api/live-player":
+                result = live_player_profile(parameter(query, "game", "lol"), parameter(query, "region", "North America"),
+                                             parameter(query, "name", ""), parameter(query, "gameId", ""),
+                                             integer_parameter(query, "participant"))
+            elif parsed.path == "/api/live-game":
+                origin = self.headers.get("Origin")
+                local = (ipaddress.ip_address(self.client_address[0]).is_loopback
+                         and urlparse("//" + self.headers.get("Host", "")).hostname in {"localhost", "127.0.0.1", "::1"}
+                         and self.headers.get("Sec-Fetch-Site") != "cross-site"
+                         and (not origin or urlparse(origin).hostname in {"localhost", "127.0.0.1", "::1"}))
+                result = live_game(parameter(query, "game", "lol"), parameter(query, "region", "North America"),
+                                   parameter(query, "name", ""), allow_local=local)
+            elif parsed.path in ("/api/match", "/api/match-player", "/api/match-timeline"):
+                arguments = {"game": parameter(query, "game", "lol"), "region": parameter(query, "region", "North America"),
+                             "name": parameter(query, "name", ""), "match_id": parameter(query, "matchId", "")}
+                if parsed.path == "/api/match-player":
+                    result = match_player(**arguments, participant=integer_parameter(query, "participant"))
+                else:
+                    result = (match_timeline if parsed.path == "/api/match-timeline" else match_details)(**arguments)
             elif parsed.path == "/api/search":
                 refresh = parameter(query, "refresh", "0")
                 if refresh not in {"0", "1"}:
